@@ -35,7 +35,7 @@ import { queryData } from "./query";
     return {
       code: row.code.value,
       surface: row.surface.value,
-      population: row.population.value,
+      population: +row.population.value,
       label: row.itemLabel.value,
     };
   });
