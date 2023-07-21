@@ -1,6 +1,6 @@
 import "./style.css";
 import * as echarts from "echarts";
-import * as d3 from "d3";
+// import * as d3 from "d3";
 import { queryData } from "./query";
 
 (async () => {
@@ -9,13 +9,11 @@ import { queryData } from "./query";
     throw new Error("Cannot find div.map");
   }
   const myChart = echarts.init(chartDom);
-  console.log("myChart: ", myChart);
 
   myChart.showLoading();
 
-  const response = await fetch("/indonesia.geojson");
+  const response = await fetch("./indonesia.geojson");
   const indonesiaGeoJson = await response.json();
-  console.log("indonesiaGeoJson: ", indonesiaGeoJson);
 
   const wikidataRequest = `
   SELECT ?item ?itemLabel ?population ?code ?surface  {
@@ -26,13 +24,10 @@ import { queryData } from "./query";
     SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en" }
   } ORDER BY DESC(?item)
   `;
-  console.log("wikidataRequest: ", wikidataRequest);
 
   const populationJson = await queryData(wikidataRequest);
-  console.log("populationJson: ", populationJson);
 
   const results = populationJson.results.bindings;
-  console.log("results: ", results);
 
   const popJson = results.map((row: any) => {
     return {
@@ -42,20 +37,20 @@ import { queryData } from "./query";
       label: row.itemLabel.value,
     };
   });
-  console.log("popJson: ", popJson);
 
   const data = popJson.map((row: any) => ({
     name: row.code,
-    value: row.population,
+    value: +(row.population / row.surface).toFixed(0),
     label: row.label,
+    population: row.population,
   }));
 
-  const projection = d3.geoMercator();
+  // const projection = d3.geoMercator();
 
   myChart.hideLoading();
 
   echarts.registerMap("Indonesia", indonesiaGeoJson);
-  const option = {
+  const option: echarts.EChartsOption = {
     title: {
       text: "Indonesia Population Estimates",
       subtext: "Data from wikidata.org",
@@ -64,12 +59,11 @@ import { queryData } from "./query";
     },
     tooltip: {
       formatter: function (params: any) {
-        console.log("params: ", params);
-
         return `
 <div class="tooltip">
   <span>${params.data.label}</span>
-  <span><b>${params.data.value} hab.</b></span>
+  <span><b>${params.data.population} hab.</b></span>
+  <span>${params.data.value} hab./km2</span>
 </div>        
         `;
       },
@@ -77,10 +71,10 @@ import { queryData } from "./query";
     visualMap: {
       left: "left",
       min: 0,
-      max: 49000000,
+      max: 1000,
       inRange: {
         color: [
-          "hsl(240, 100%, 95%)",
+          "hsl(240, 100%, 98%)",
           "hsl(240, 100%, 90%)",
           "hsl(240, 100%, 85%)",
           "hsl(240, 100%, 80%)",
@@ -108,24 +102,27 @@ import { queryData } from "./query";
       {
         name: "Indonesia population",
         type: "map",
-        roam: "true",
         map: "Indonesia",
+        roam: true,
         zoom: 1.1,
         nameProperty: "shapeISO",
-        projection: {
-          project: function (point: [number, number]) {
-            return projection(point);
-          },
-          unproject: function (point: [number, number]) {
-            if (projection.invert) {
-              return projection.invert(point);
-            }
-            return point;
-          },
-        },
+        // projection: {
+        //   project: function (point: [number, number]) {
+        //     return projection(point);
+        //   },
+        //   unproject: function (point: [number, number]) {
+        //     if (projection.invert) {
+        //       return projection.invert(point);
+        //     }
+        //     return point;
+        //   },
+        // },
         emphasis: {
           label: {
             show: false,
+          },
+          itemStyle: {
+            areaColor: "hsl(120, 100%, 35%)",
           },
         },
         data: data,
